@@ -1,14 +1,9 @@
 module Explora.Api
 
-open BitcoinRpc
-
 let getTransaction (txId: string)  =
     promise {
-        try
-            let! response = makeRpcCall "getrawtransaction" [| txId; 3 |]
-            return Ok response
-        with ex ->
-            return Error $"Failed to fetch transaction: %s{ex.Message}"
+        let! response = Esplora.getTransaction txId
+        return response |> Result.mapError (fun message -> $"Failed to fetch transaction: %s{message}")
     }
         
 let getSpenderTransaction (txId: string) (index: int) =

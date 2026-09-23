@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "build": "dotnet fable --run npx vite build",
+    "test": "dotnet fable && node --test tests/*.test.mjs"
+  },
   "devDependencies": {
     "vite": "^6.1.0"
   }

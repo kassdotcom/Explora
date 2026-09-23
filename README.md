@@ -1,7 +1,7 @@
 # Explora - a visual tool to follow a chain of transactions
 
-This is a toy project to try some F# Fable (and Feliz). The explorer uses mempool.space and ankr.com APIs
-to fetch transactions.
+This is a toy project to try some F# Fable (and Feliz). The explorer fetches transactions from the
+Esplora API of mempool.space (falling back to blockstream.info), which needs no API key.
 
 ![](/images/view.png)
 
@@ -19,7 +19,14 @@ $ python -m http.server 8080 & $BROWSER http://localhost:8080
 ```
 ## How to build
 ```
+$ dotnet tool restore   # installs the Fable compiler pinned in .config/dotnet-tools.json
+$ npm ci
 $ dotnet fable --run npx vite build
+```
+
+## How to test
+```
+$ npm test
 ```
 
 ## How to run 
