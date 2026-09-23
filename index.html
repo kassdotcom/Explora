@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Explora</title>
-    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js" integrity="sha512-iTgTmIgxyA2YehKNVbzLJx4j9SnuC5ihtRrtxVkXH/9nF3vXBN5YeNQp+6wufBWKD3u+roHVNOvWBMufQnBbug==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         * {
             margin: 0;
@@ -23,7 +23,7 @@
             background-color: #2d2d2d;
             padding: 1rem;
             display: flex;
-            justify-content: space-between;
+            justify-content: space-between; /* Ajustado para distribuir elementos */
             align-items: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             z-index: 100
@@ -32,10 +32,29 @@
         .logo {
             font-size: 1.5rem;
             font-weight: bold;
+            margin-right: auto; /* Empuja el logo a la izquierda */
+        }
+
+        /* Modificación: Contenedor para la barra de búsqueda y el botón de ayuda */
+        .main-header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem; /* Espacio entre el contenedor de búsqueda y el enlace de ayuda */
+            flex-grow: 1; /* Permite que este div ocupe el espacio central */
+            justify-content: center; /* Centra el contenido horizontalmente */
+        }
+
+        /* Nuevo estilo para la etiqueta del campo de búsqueda */
+        .search-label {
+            color: #ffffff;
+            font-weight: bold;
+            margin-right: 5px; /* Espacio entre la etiqueta y el campo */
+            white-space: nowrap; /* Evita que la etiqueta se rompa en varias líneas */
         }
 
         .search-container {
             display: flex;
+            align-items: center; /* Alinea verticalmente el input y el botón */
             gap: 0.5rem;
         }
 
@@ -77,7 +96,7 @@
             width: 360px;
             height: 90%;
             padding: 5px;
-            background-color: rgba(45, 45, 45, 0.9); 
+            background-color: rgba(45, 45, 45, 0.9);
             box-shadow: -2px 0 5px rgba(0,0,0,0.2);
             overflow-y: auto;
             overflow-x: clip;
@@ -181,8 +200,117 @@
             color: #3d8c40;  /* Darker green when clicked */
         }
         .vis-tooltip {
-            background-color: rgba(255, 255, 255, 0.1) !important; 
+            background-color: rgba(255, 255, 255, 0.1) !important;
             color: #eeeeee !important;
+        }
+
+        /* Styles for the Help Modal */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 200; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #2d2d2d;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #4CAF50;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+            animation-name: animatetop;
+            animation-duration: 0.4s
+        }
+
+        /* Add Animation */
+        @keyframes animatetop {
+            from {top: -300px; opacity: 0}
+            to {top: 0; opacity: 1}
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            cursor: pointer;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-content h2 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .modal-content p {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .modal-content ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .modal-content li {
+            margin-bottom: 5px;
+        }
+
+        .help-link {
+            color: #4CAF50;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .help-link:hover {
+            background-color: rgba(76, 175, 80, 0.2);
+        }
+
+        .language-selector {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            margin-left: 1rem; /* Espacio entre el botón de ayuda y el selector de idioma */
+        }
+
+        .language-selector span {
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: background-color 0.2s ease;
+        }
+
+        .language-selector span.active,
+        .language-selector span:hover {
+            background-color: #4CAF50;
         }
     </style>
     <script type="module" src="App.fs.js"></script>
@@ -190,18 +318,189 @@
   <body>
     <header>
         <div class="logo">Explora</div>
-        <div class="search-container">
-            <input id="txId" type="text" class="search-input" placeholder="Enter Transaction ID" value="f0a1f254d1f1f62080152713247c897bbc9ca9c3f4215cbb3ba0d55a535eaa5e">
-            <button id="search-button" class="search-button">Search</button>
+        <div class="main-header-controls">
+            <div class="search-container">
+                <span id="searchLabel" class="search-label"></span>
+                <input id="txId" type="text" class="search-input" value="f0a1f254d1f1f62080152713247c897bbc9ca9c3f4215cbb3ba0d55a535eaa5e">
+                <button id="search-button" class="search-button"></button>
+            </div>
+            <a href="#" id="helpLink" class="help-link"></a> </div>
+        <div class="language-selector">
+            <span id="langEs" class="lang-option active">ES</span>
+            <span id="langEn" class="lang-option">EN</span>
         </div>
     </header>
     <div class="content-wrapper">
         <div id="mynetwork" class="main-content">
-            <!-- Network visualization area -->
-        </div>
+            </div>
         <div id="tx-details" class="side-panel hidden">
-            <!-- Content for the side panel -->
-        </div>
+            </div>
     </div>
+
+    <div id="helpModal" class="modal">
+      <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <h2 data-lang-key="modalTitle"></h2>
+        <div id="modalContentEs" class="lang-content">
+            <p>EXPLORA es una herramienta interactiva diseñada para ayudarte a visualizar y entender las transacciones en la red de Bitcoin. Puedes rastrear el flujo de fondos y ver cómo se conectan las distintas partes de una transacción.</p>
+
+            <h3>¿Cómo usarla?</h3>
+            <ul>
+              <li><strong>Buscar una Transacción:</strong>
+                <p>En la barra superior, encontrarás un campo de texto para el ID de Transacción. Aquí, pega o escribe el identificador único de una transacción de Bitcoin que quieras explorar. Luego, haz clic en el botón "Buscar".</p>
+              </li>
+              <li><strong>Navegar el Gráfico Visual:</strong>
+                <p>Una vez que se carga la transacción, el área central de la pantalla mostrará un gráfico. Los elementos en este gráfico representan direcciones de Bitcoin y la transacción que buscaste. Las líneas indican cómo los fondos se mueven entre ellas.</p>
+                <ul>
+                  <li>Mover y Zoom: Puedes hacer clic y arrastrar el fondo del gráfico para moverlo, y usar la rueda del ratón para acercar o alejar (zoom).</li>
+                  <li>Seleccionar Elementos: Haz clic en cualquier nodo (la caja que representa una transacción o dirección) en el gráfico.</li>
+                </ul>
+              </li>
+              <li><strong>Ver Detalles en el Panel Lateral:</strong>
+                <p>Al seleccionar un nodo en el gráfico, un panel aparecerá o se actualizará en el lado derecho de la pantalla. Este panel te mostrará toda la información relevante de ese elemento, como direcciones de entrada y salida, montos, tarifas y otros datos importantes de la transacción.</p>
+                <ul>
+                  <li>Explorar más: Los IDs de transacciones y las direcciones dentro del panel de detalles suelen ser enlaces clicables. Si haces clic en ellos, la aplicación buscará y te mostrará los detalles de ese nuevo elemento, permitiéndote seguir la pista de los fondos.</li>
+                </ul>
+              </li>
+            </ul>
+            <h3>Atajos de Teclado:</h3>
+            <ul>
+              <li>Teclas 'M' / 'm': Marcar la transacción o dirección seleccionada en el gráfico con un color rojo.</li>
+              <li>Teclas 'Z' / 'z': Deshacer la última acción de marcado (restaura el color original del nodo).</li>
+            </ul>
+        </div>
+        <div id="modalContentEn" class="lang-content" style="display:none;">
+            <p>EXPLORA is an interactive tool designed to help you visualize and understand transactions on the Bitcoin network. You can trace the flow of funds and see how different parts of a transaction are connected.</p>
+
+            <h3>How to use it?</h3>
+            <ul>
+              <li><strong>Search for a Transaction:</strong>
+                <p>In the top bar, you'll find a text field for the Transaction ID. Here, paste or type the unique identifier of a Bitcoin transaction you want to explore. Then, click the "Search" button.</p>
+              </li>
+              <li><strong>Navigate the Visual Graph:</strong>
+                <p>Once the transaction loads, the central area of the screen will display a graph. Elements in this graph represent Bitcoin addresses and the transaction you searched for. Lines indicate how funds move between them.</p>
+                <ul>
+                  <li>Move and Zoom: You can click and drag the graph background to move it, and use your mouse wheel to zoom in or out.</li>
+                  <li>Select Elements: Click on any node (the box representing a transaction or address) in the graph.</li>
+                </ul>
+              </li>
+              <li><strong>View Details in the Side Panel:</strong>
+                <p>When you select a node in the graph, a panel will appear or update on the right side of the screen. This panel will show you all relevant information for that element, such as input and output addresses, amounts, fees, and other important transaction data.</p>
+                <ul>
+                  <li>Explore More: Transaction IDs and addresses within the details panel are often clickable links. If you click on them, the application will search for and display the details of that new element, allowing you to follow the money trail.</li>
+                </ul>
+              </li>
+            </ul>
+            <h3>Keyboard Shortcuts:</h3>
+            <ul>
+              <li>'M' / 'm' Keys: Mark the selected transaction or address in the graph with a red color.</li>
+              <li>'Z' / 'z' Keys: Undo the last marking action (restores the node's original color).</li>
+            </ul>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        // Data for translations
+        const translations = {
+            es: {
+                modalTitle: "¿Qué hace \"Explora\"?",
+                searchLabel: "ID de Transacción:",
+                searchPlaceholder: "Ingresar ID de Transacción", // Aunque no se usa, lo mantengo por si acaso
+                searchButton: "Buscar",
+                helpLink: "Ayuda",
+            },
+            en: {
+                modalTitle: "What does \"Explora\" do?",
+                searchLabel: "Transaction ID:",
+                searchPlaceholder: "Enter Transaction ID", // Aunque no se usa, lo mantengo por si acaso
+                searchButton: "Search",
+                helpLink: "Help",
+            }
+        };
+
+        // Get elements for modal
+        const modal = document.getElementById("helpModal");
+        const helpBtn = document.getElementById("helpLink");
+        const closeBtn = document.getElementsByClassName("close-button")[0];
+
+        // Get elements for language selector
+        const langEsBtn = document.getElementById("langEs");
+        const langEnBtn = document.getElementById("langEn");
+        const langContentEs = document.getElementById("modalContentEs");
+        const langContentEn = document.getElementById("modalContentEn");
+
+        // Elements to update text
+        const searchLabel = document.getElementById("searchLabel");
+        const searchInput = document.getElementById("txId");
+        const searchButton = document.getElementById("search-button");
+        const modalTitle = document.querySelector("#helpModal h2[data-lang-key='modalTitle']");
+
+
+        // Function to set the language
+        function setLanguage(lang) {
+            // Update active class for language buttons
+            langEsBtn.classList.remove('active');
+            langEnBtn.classList.remove('active');
+            if (lang === 'es') {
+                langEsBtn.classList.add('active');
+            } else {
+                langEnBtn.classList.add('active');
+            }
+
+            // Hide/show modal content
+            if (lang === 'es') {
+                langContentEs.style.display = 'block';
+                langContentEn.style.display = 'none';
+            } else {
+                langContentEs.style.display = 'none';
+                langContentEn.style.display = 'block';
+            }
+
+            // Update other translatable elements
+            searchLabel.textContent = translations[lang].searchLabel;
+            searchButton.textContent = translations[lang].searchButton;
+            helpBtn.textContent = translations[lang].helpLink;
+            modalTitle.textContent = translations[lang].modalTitle;
+
+            // Store user's language preference
+            localStorage.setItem('userLanguage', lang);
+
+            // Update HTML lang attribute (important for accessibility and SEO)
+            document.documentElement.lang = lang;
+        }
+
+        // Get user's preferred language from browser or localStorage
+        let userLang = localStorage.getItem('userLanguage') || navigator.language.split('-')[0];
+        if (!translations[userLang]) {
+            userLang = 'en'; // Default to English if no match
+        }
+        setLanguage(userLang); // Set initial language
+
+
+        // Event Listeners for modal
+        helpBtn.onclick = function() {
+            modal.style.display = "flex";
+        }
+
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // Event Listeners for language selector
+        langEsBtn.onclick = function() {
+            setLanguage('es');
+        }
+
+        langEnBtn.onclick = function() {
+            setLanguage('en');
+        }
+    </script>
   </body>
 </html>
