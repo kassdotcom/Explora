@@ -130,14 +130,28 @@ let init() =
             update graph newGraphModel
         | Error msg -> window.alert msg
         
-    // Loads the transactions behind the inputs, `SourcesPerExpansion` at a time and largest first.
-    // What doesn't fit stays as a "+N" node next to the transaction; double-clicking it loads the
-    // next batch.
+    // Every address already on the map, except the ones behind the inputs being ranked: those are
+    // the candidates, and counting them would make every source look reused.
+    let knownAddresses (tx: ConfirmedTransaction) (graphModel: GraphModel) =
+        graphModel
+        |> GraphModel.getTransactions
+        |> List.collect (fun loaded ->
+            let outputs = loaded.vout |> Array.toList |> List.choose (fun output -> output.scriptPubKey.address)
+            let inputs =
+                if loaded.txid = tx.txid then []
+                else loaded.vin |> Array.toList |> List.choose (fun input -> input.prevOut.scriptPubKey.address)
+            outputs @ inputs)
+        |> List.distinct
+        |> Array.ofList
+
+    // Loads the transactions behind the inputs, `SourcesPerExpansion` at a time: address reuse first,
+    // then largest first. What doesn't fit stays as a "+N" node next to the transaction;
+    // double-clicking it loads the next batch.
     let expandSources (tx: ConfirmedTransaction) =
         promise {
             let mutable graphModel = getCurrentGraphModel()
             let loadedIds = graphModel.Nodes |> List.map (fun node -> node.Id) |> Array.ofList
-            let ranked = rankSources tx.vin loadedIds |> List.ofArray
+            let ranked = rankSources tx.vin loadedIds (knownAddresses tx graphModel) |> List.ofArray
             let batch, rest = List.splitAt (min SourcesPerExpansion ranked.Length) ranked
             for (sourceTxId, _) in batch do
                 let! txResult = requestTransaction sourceTxId graphModel

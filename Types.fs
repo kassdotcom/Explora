@@ -117,12 +117,29 @@ module GraphModel =
             let pending = { TxId = txid; SourceTxIds = sources |> List.map fst; Value = sources |> List.sumBy snd }
             { g with Pending = pending :: others }
 
-// Ranks the source transactions of `inputs` by the value they bring in, largest first, leaving out
-// the ones already in the graph. Several inputs can come from the same transaction: it counts once,
-// with the values added up.
-let rankSources (inputs: Input[]) (loadedTxIds: string[]) : (string * float)[] =
+// Ranks the source transactions of `inputs`: first the ones that reuse an address, then by the value
+// they bring in, largest first; the ones already in the graph are left out. Several inputs can come
+// from the same transaction: it counts once, with the values added up.
+//
+// An address is reused when it funds more than one input of this transaction, or when it is already
+// somewhere on the map (`knownAddresses`). That is the signal the graph labels "reused", and in a
+// CoinJoin, where every source is worth about the same, it is what a student wants to see first.
+let rankSources (inputs: Input[]) (loadedTxIds: string[]) (knownAddresses: string[]) : (string * float)[] =
+    let fundingCounts =
+        inputs
+        |> Array.choose (fun input -> input.prevOut.scriptPubKey.address)
+        |> Array.countBy id
+        |> Map.ofArray
+    let isReused (input: Input) =
+        match input.prevOut.scriptPubKey.address with
+        | None -> false
+        | Some address -> Map.find address fundingCounts > 1 || Array.contains address knownAddresses
     inputs
     |> Array.filter (fun input -> not (Array.contains input.txid loadedTxIds))
     |> Array.groupBy (fun input -> input.txid)
-    |> Array.map (fun (txid, group) -> txid, group |> Array.sumBy (fun input -> input.prevOut.value))
-    |> Array.sortByDescending snd
+    |> Array.map (fun (txid, group) ->
+        let reused = group |> Array.exists isReused
+        let value = group |> Array.sumBy (fun input -> input.prevOut.value)
+        txid, reused, value)
+    |> Array.sortByDescending (fun (_, reused, value) -> reused, value)
+    |> Array.map (fun (txid, _, value) -> txid, value)

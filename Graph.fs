@@ -332,7 +332,7 @@ let updateEdge (graph: Graph) (anySelected: bool) (reusedAddresses: string list)
 
 let createPendingTitle (pending: PendingSources) =
     let count = List.length pending.SourceTxIds
-    $"{count} more source transactions not loaded ({formatAmount pending.Value}). Double-click to load the next {min SourcesPerExpansion count}, largest first."
+    $"{count} more source transactions not loaded ({formatAmount pending.Value}). Double-click to load the next {min SourcesPerExpansion count}: address reuse first, then largest."
 
 let updatePendingNode (graph: Graph) (pending: PendingSources) =
     let id = GraphModel.pendingNodeId pending.TxId
