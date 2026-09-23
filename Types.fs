@@ -47,9 +47,19 @@ type EdgeModel = {
     OutputData: OutputMetadata
 }
 
+// The source transactions of a transaction's inputs that are not loaded yet. A CoinJoin can have
+// hundreds of inputs, so a double click loads them in batches and the graph shows what is left as
+// one "+N" node instead of fetching everything at once.
+type PendingSources = {
+    TxId: NodeId
+    SourceTxIds: string list   // distinct, most valuable first
+    Value: float               // BTC those inputs bring in
+}
+
 type GraphModel = {
     Nodes: NodeModel list
     Edges: EdgeModel list
+    Pending: PendingSources list
 }
 
 module GraphModel =
@@ -88,3 +98,31 @@ module GraphModel =
         |> List.groupBy (id)
         |> List.filter (fun (_, es) -> List.length es > 1) 
         |> List.map fst
+
+    let pendingNodeId (txid: NodeId) = $"pending-{txid}"
+    let pendingEdgeId (txid: NodeId) = $"pending-{txid}-edge"
+
+    // The transaction a "+N" node belongs to, if the id is one of those.
+    let pendingOwner (nodeId: NodeId) (g: GraphModel) =
+        g.Pending
+        |> List.tryFind (fun pending -> pendingNodeId pending.TxId = nodeId)
+        |> Option.map (fun pending -> pending.TxId)
+
+    // Replaces what is pending for `txid`; an empty list removes the "+N" node.
+    let setPending (txid: NodeId) (sources: (string * float) list) (g: GraphModel) =
+        let others = g.Pending |> List.filter (fun pending -> pending.TxId <> txid)
+        match sources with
+        | [] -> { g with Pending = others }
+        | _ ->
+            let pending = { TxId = txid; SourceTxIds = sources |> List.map fst; Value = sources |> List.sumBy snd }
+            { g with Pending = pending :: others }
+
+// Ranks the source transactions of `inputs` by the value they bring in, largest first, leaving out
+// the ones already in the graph. Several inputs can come from the same transaction: it counts once,
+// with the values added up.
+let rankSources (inputs: Input[]) (loadedTxIds: string[]) : (string * float)[] =
+    inputs
+    |> Array.filter (fun input -> not (Array.contains input.txid loadedTxIds))
+    |> Array.groupBy (fun input -> input.txid)
+    |> Array.map (fun (txid, group) -> txid, group |> Array.sumBy (fun input -> input.prevOut.value))
+    |> Array.sortByDescending snd

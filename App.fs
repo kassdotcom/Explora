@@ -1,4 +1,4 @@
-﻿module Index
+module Index
 
 open System.Collections.Generic
 open BitcoinRpc
@@ -118,7 +118,7 @@ let init() =
     // Create HTML structure
     let graph = createGraph container
     let graphModelHistory = Stack<GraphModel>()
-    graphModelHistory.Push { Nodes = []; Edges = [] }
+    graphModelHistory.Push { Nodes = []; Edges = []; Pending = [] }
     
     let getCurrentGraphModel () =
         graphModelHistory.Peek ()
@@ -130,18 +130,24 @@ let init() =
             update graph newGraphModel
         | Error msg -> window.alert msg
         
-    let addTxsAndTxosToGraph (tx: ConfirmedTransaction) =
+    // Loads the transactions behind the inputs, `SourcesPerExpansion` at a time and largest first.
+    // What doesn't fit stays as a "+N" node next to the transaction; double-clicking it loads the
+    // next batch.
+    let expandSources (tx: ConfirmedTransaction) =
         promise {
             let mutable graphModel = getCurrentGraphModel()
-            for inp in tx.vin do
-                let! txResult = requestTransaction inp.txid graphModel
+            let loadedIds = graphModel.Nodes |> List.map (fun node -> node.Id) |> Array.ofList
+            let ranked = rankSources tx.vin loadedIds |> List.ofArray
+            let batch, rest = List.splitAt (min SourcesPerExpansion ranked.Length) ranked
+            for (sourceTxId, _) in batch do
+                let! txResult = requestTransaction sourceTxId graphModel
                 graphModel <-
                     match txResult with
                     | Ok newGraphModel ->
                         update graph newGraphModel
                         newGraphModel
                     | _ -> graphModel
-            updateGraphModel (Ok graphModel)
+            updateGraphModel (Ok (GraphModel.setPending tx.txid rest graphModel))
         } |> Promise.start
          
         
@@ -229,11 +235,13 @@ let init() =
            if ps.nodes.Length > 0 then
               let graphModel = getCurrentGraphModel()
               let clickedNodeId = ps.nodes[0]
+              // A "+N" node stands for the transaction it hangs from.
+              let txNodeId = GraphModel.pendingOwner clickedNodeId graphModel |> Option.defaultValue clickedNodeId
               graphModel
-              |> GraphModel.getNode clickedNodeId
+              |> GraphModel.getNode txNodeId
               |> Option.iter (fun clickedNodeModel ->
                   match clickedNodeModel.Metadata with
-                  | U2.Case2 txMetadata -> addTxsAndTxosToGraph txMetadata.tx
+                  | U2.Case2 txMetadata -> expandSources txMetadata.tx
                   | _ -> ())
        | None -> ())
 

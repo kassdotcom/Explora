@@ -29,6 +29,15 @@ let unknown = "#ff0000"
 let markedColor = "#ff5722"
 [<Literal>]
 let ignoredColor ="#333333"
+[<Literal>]
+let pendingColor = "#f6c90e"
+[<Literal>]
+let pendingTextColor = "#141414"
+
+// How many source transactions a double click loads at once. Above that, the rest waits behind a
+// "+N" node: a CoinJoin with hundreds of inputs used to mean hundreds of requests and nodes in one go.
+[<Literal>]
+let SourcesPerExpansion = 20
 
 type Graph = {
     network: Network
@@ -321,22 +330,58 @@ let updateEdge (graph: Graph) (anySelected: bool) (reusedAddresses: string list)
     edge.label <- label
     edge
 
+let createPendingTitle (pending: PendingSources) =
+    let count = List.length pending.SourceTxIds
+    $"{count} more source transactions not loaded ({formatAmount pending.Value}). Double-click to load the next {min SourcesPerExpansion count}, largest first."
+
+let updatePendingNode (graph: Graph) (pending: PendingSources) =
+    let id = GraphModel.pendingNodeId pending.TxId
+    let node =
+        graph.data.nodes.get(U2.Case1 id)
+        |> Option.defaultWith (fun () -> jsOptions<Node>(fun o -> o.id <- Some !^id))
+    node.label <- Some $"+{List.length pending.SourceTxIds}"
+    node.title <- Some !^(createPendingTitle pending)
+    node.shape <- Some "box"
+    node.color <- Some !^pendingColor
+    node.font <- Some !^(jsOptions<Font>(fun f ->
+        f.color <- Some pendingTextColor
+        f.size <- Some 14.0))
+    node
+
+let updatePendingEdge (graph: Graph) (pending: PendingSources) =
+    let id = GraphModel.pendingEdgeId pending.TxId
+    let edge =
+        graph.data.edges.get(U2.Case1 id)
+        |> Option.defaultWith (fun () -> jsOptions<Edge>(fun o -> o.id <- Some !^id))
+    edge.from <- Some !^(GraphModel.pendingNodeId pending.TxId)
+    edge.``to`` <- Some !^pending.TxId
+    edge.title <- Some !^(createPendingTitle pending)
+    edge.value <- Some pending.Value
+    edge.dashes <- Some (U2.Case1 true)
+    edge.color <- Some !^pendingColor
+    edge.arrows <- Some !^"middle"
+    edge
+
 let getUnexistentNodes graph graphModel =
     let nodeIds = graphModel.Nodes |> List.map (fun x -> !^x.Id)
+    let pendingIds = graphModel.Pending |> List.map (fun p -> !^(GraphModel.pendingNodeId p.TxId))
     let allNodeIds = graph.data.nodes.getIds()
-    allNodeIds |> Seq.except nodeIds
+    allNodeIds |> Seq.except (nodeIds @ pendingIds)
     
 let getUnexistentEdges graph graphModel =
     let edgesIds = graphModel.Edges |> List.map (fun x -> !^x.Id)
+    let pendingIds = graphModel.Pending |> List.map (fun p -> !^(GraphModel.pendingEdgeId p.TxId))
     let allEdgeIds = graph.data.edges.getIds()
-    allEdgeIds |> Seq.except edgesIds
+    allEdgeIds |> Seq.except (edgesIds @ pendingIds)
     
 let update graph graphModel =
     let updatedNodes = ResizeArray ( graphModel.Nodes |> List.map(updateNode graph)  )
+    updatedNodes.AddRange (graphModel.Pending |> List.map (updatePendingNode graph))
     let nodesToRemove = ResizeArray (getUnexistentNodes graph graphModel)
     let isAnySelected = graphModel.Nodes |> List.exists (_.Selected)
     let reusedAddrs = GraphModel.getAddressReused graphModel
     let updatedEdges = ResizeArray ( graphModel.Edges |> List.map(updateEdge graph isAnySelected reusedAddrs)  )
+    updatedEdges.AddRange (graphModel.Pending |> List.map (updatePendingEdge graph))
     let edgesToRemove = ResizeArray (getUnexistentEdges graph graphModel)
     graph.data.nodes.remove (!^nodesToRemove) |> ignore
     graph.data.edges.remove (!^edgesToRemove) |> ignore
