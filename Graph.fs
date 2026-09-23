@@ -356,7 +356,8 @@ let updatePendingEdge (graph: Graph) (pending: PendingSources) =
     edge.from <- Some !^(GraphModel.pendingNodeId pending.TxId)
     edge.``to`` <- Some !^pending.TxId
     edge.title <- Some !^(createPendingTitle pending)
-    edge.value <- Some pending.Value
+    // No `value`: the other edges scale their width with the amount, but this one would come out as a
+    // fat yellow bar that swallows the small "+N" box. The amount is in the tooltip.
     edge.dashes <- Some (U2.Case1 true)
     edge.color <- Some !^pendingColor
     edge.arrows <- Some !^"middle"
