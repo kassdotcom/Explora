@@ -23,6 +23,7 @@ $ dotnet tool restore   # installs the Fable compiler pinned in .config/dotnet-t
 $ npm ci
 $ dotnet fable --run npx vite build
 ```
+The built site in `dist/` uses relative paths, so it works from the root of a server or from a subdirectory.
 
 ## How to test
 ```
